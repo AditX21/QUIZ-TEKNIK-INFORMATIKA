@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>KUIS FUTURISTIK - Versi Soal Baru</title>
+<style>
+    body {
+        font-family: "Segoe UI", Arial, sans-serif;
+        background: linear-gradient(135deg,#2a0b4a 0%, #6a2bd8 100%);
+        color: #fff;
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+    }
+
+    .card {
+        width: 100%;
+        max-width: 520px;
+        background: rgba(255,255,255,0.06);
+        border-radius: 16px;
+        padding: 22px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+        text-align: center;
+        transform: translateX(30px);
+        opacity: 0;
+        transition: transform 0.6s cubic-bezier(.2,.9,.2,1), opacity 0.6s;
+    }
+
+    .card.show {
+        transform: translateX(0);
+        opacity: 1;
+    }
+
+    h2 { margin: 6px 0 14px 0; color: #ffeaff; }
+    p { margin: 6px 0 12px 0; color: #f4e6ff; }
+
+    input[type="text"]{
+        width: 92%;
+        padding: 10px;
+        border-radius: 10px;
+        border: none;
+        outline: none;
+        margin-top: 6px;
+    }
+
+    #timer {
+        font-weight: 700;
+        margin-bottom: 10px;
+        color: #ffd6ff;
+    }
+
+    .option {
+        text-align: left;
+        background: rgba(0,0,0,0.12);
+        padding: 12px 14px;
+        margin: 8px 0;
+        border-radius: 10px;
+        cursor: pointer;
+        user-select: none;
+        transition: transform 0.15s, background 0.15s;
+        color: #fff;
+    }
+    .option:hover { transform: translateX(6px); background: rgba(255,255,255,0.06); }
+    .option:active { transform: translateX(2px); }
+
+    button {
+        background: linear-gradient(90deg,#cfa0ff,#8b59ff);
+        border: none;
+        color: #1a0329;
+        padding: 11px 20px;
+        border-radius: 10px;
+        font-size: 15px;
+        cursor: pointer;
+        margin-top: 12px;
+    }
+    button:hover { filter: brightness(1.06); }
+
+    #leaderboardList { text-align: left; margin-top: 10px; max-height: 220px; overflow:auto; }
+    .leaderboard-item {
+        background: rgba(0,0,0,0.12);
+        padding: 8px 10px;
+        margin: 6px 0;
+        border-radius: 8px;
+        color: #fff;
+    }
+
+    .small { font-size: 13px; color: #ffdff6; margin-top: 6px; }
+</style>
+</head>
+<body>
+
+<!-- START SCREEN -->
+<div id="startScreen" class="card show">
+    <h2>KUIS INFORMATIKA</h2>
+    <p>Masukkan nama dan tekan START untuk memulai (1 menit per soal)</p>
+    <input id="playerName" type="text" placeholder="Nama Anda (mis. Budi)"/>
+    <div style="margin-top:12px">
+        <button onclick="startGame()">START</button>
+    </div>
+    <p class="small">Leaderboard menyimpan 15 skor tertinggi di browser kamu.</p>
+</div>
+
+<!-- QUIZ CARD -->
+<div id="quizCard" class="card" style="display:none;">
+    <div id="timer">Waktu: 60 detik</div>
+    <h3 id="questionText"></h3>
+    <div id="options"></div>
+</div>
+
+<!-- RESULT + LEADERBOARD -->
+<div id="resultCard" class="card" style="display:none;">
+    <h2>Hasil Kuis</h2>
+    <p id="finalScore"></p>
+
+    <h3 style="margin-top:12px">Leaderboard (Top 10)</h3>
+    <div id="leaderboardList"></div>
+
+</div>
+
+<script>
+/* --- Soal baru sesuai input user --- */
+/*
+1. Komputer adalah…
+A. Hewan peliharaan
+B. Alat untuk mengolah data  <- jawaban
+C. Mainan anak
+D. Alat memasak
+
+2. Perangkat keras komputer disebut juga…
+A. Hardware <- jawaban
+B. Software
+C. Brainware
+D. Noware
+
+3. Contoh perangkat lunak (software) adalah…
+A. Mouse
+B. Keyboard
+C. Microsoft Word <- jawaban
+D. Monitor
+
+4. Alat untuk menggerakkan kursor adalah…
+A. Printer
+B. Mouse <- jawaban
+C. Flashdisk
+D. Speaker
+
+5. Tempat menyimpan data di komputer adalah…
+A. Harddisk <- jawaban
+B. Layar
+C. Mouse
+D. CPU
+*/
+
+const questions = [
+    {
+        q: "1. Komputer adalah…",
+        options: ["Hewan peliharaan","Alat untuk mengolah data","Mainan anak","Alat memasak"],
+        answer: 1
+    },
+    {
+        q: "2. Perangkat keras komputer disebut juga…",
+        options: ["Hardware","Software","Brainware","Noware"],
+        answer: 0
+    },
+    {
+        q: "3. Contoh perangkat lunak (software) adalah…",
+        options: ["Mouse","Keyboard","Microsoft Word","Monitor"],
+        answer: 2
+    },
+    {
+        q: "4. Alat untuk menggerakkan kursor adalah…",
+        options: ["Printer","Mouse","Flashdisk","Speaker"],
+        answer: 1
+    },
+    {
+        q: "5. Tempat menyimpan data di komputer adalah…",
+        options: ["Harddisk","Layar","Mouse","CPU"],
+        answer: 0
+    }
+];
+
+let index = 0;
+let score = 0;
+let timerInterval = null;
+let timeLeft = 60;
+let playerName = "";
+
+/* helpers untuk animasi show/hide card */
+function showCard(el){
+    el.style.display = "block";
+    setTimeout(()=> el.classList.add("show"), 40);
+}
+function hideCard(el){
+    el.classList.remove("show");
+    setTimeout(()=> el.style.display = "none", 380);
+}
+
+/* Start game */
+function startGame(){
+    const nameInput = document.getElementById("playerName").value.trim();
+    if(!nameInput){
+        alert("Masukkan nama dulu!");
+        return;
+    }
+    playerName = nameInput;
+    // reset state
+    index = 0; score = 0;
+
+    hideCard(document.getElementById("startScreen"));
+    // show quiz card
+    document.getElementById("quizCard").style.display = "block";
+    setTimeout(()=> document.getElementById("quizCard").classList.add("show"), 60);
+    loadQuestion();
+}
+
+/* load question */
+function loadQuestion(){
+    if(index >= questions.length){
+        finishQuiz();
+        return;
+    }
+
+    // show animation (slide + fade via CSS class)
+    const quizCard = document.getElementById("quizCard");
+    quizCard.classList.remove("show");
+    setTimeout(()=> quizCard.classList.add("show"), 50);
+
+    // reset timer and options
+    timeLeft = 60;
+    updateTimerDisplay();
+
+    clearInterval(timerInterval);
+    timerInterval = setInterval(()=>{
+        timeLeft--;
+        updateTimerDisplay();
+        if(timeLeft < 0){
+            // jika waktu habis, lanjut ke soal berikutnya (tanpa menambah skor)
+            index++;
+            loadQuestion();
+        }
+    }, 1000);
+
+    // tampilkan soal & opsi
+    const qs = questions[index];
+    document.getElementById("questionText").innerText = qs.q;
+
+    const optionsDiv = document.getElementById("options");
+    optionsDiv.innerHTML = "";
+    qs.options.forEach((opt, i) => {
+        const d = document.createElement("div");
+        d.className = "option";
+        d.innerText = String.fromCharCode(65+i) + ". " + opt;
+        d.onclick = () => selectOption(i);
+        optionsDiv.appendChild(d);
+    });
+}
+
+/* update tampilan timer */
+function updateTimerDisplay(){
+    document.getElementById("timer").innerText = "Waktu: " + Math.max(0, timeLeft) + " detik";
+}
+
+/* pilihan jawaban diklik */
+function selectOption(choiceIndex){
+    // cek jawaban
+    if(choiceIndex === questions[index].answer) score++;
+    // lanjut
+    index++;
+    loadQuestion();
+}
+
+/* selesai kuis */
+function finishQuiz(){
+    clearInterval(timerInterval);
+    hideCard(document.getElementById("quizCard"));
+
+    // tampilkan hasil
+    const resultCard = document.getElementById("resultCard");
+    document.getElementById("finalScore").innerText = `${playerName}, skor kamu: ${score} / ${questions.length}`;
+    showCard(resultCard);
+
+    // simpan leaderboard (urut menurun)
+    saveToLeaderboard({name: playerName, score: score});
+    renderLeaderboard();
+}
+
+/* leaderboard functions */
+function saveToLeaderboard(entry){
+    let data = JSON.parse(localStorage.getItem("leaderboard_v1")) || [];
+    data.push(entry);
+    // sort desc by score
+    data.sort((a,b) => b.score - a.score);
+    // keep top 10
+    data = data.slice(0,10);
+    localStorage.setItem("leaderboard_v1", JSON.stringify(data));
+}
+
+function renderLeaderboard(){
+    const board = document.getElementById("leaderboardList");
+    board.innerHTML = "";
+    let data = JSON.parse(localStorage.getItem("leaderboard_v1")) || [];
+    if(data.length === 0){
+        board.innerHTML = "<div class='small'>Belum ada skor tersimpan.</div>";
+        return;
+    }
+    data.forEach((it, idx) => {
+        const div = document.createElement("div");
+        div.className = "leaderboard-item";
+        div.innerHTML = `<strong>#${idx+1}</strong> ${escapeHtml(it.name)} — Skor: <strong>${it.score}</strong>`;
+        board.appendChild(div);
+    });
+}
+
+/* restart (mulai ulang) */
+function restart(){
+    // kembali ke start screen
+    hideCard(document.getElementById("resultCard"));
+    setTimeout(()=>{
+        // reset UI and show start
+        document.getElementById("playerName").value = "";
+        document.getElementById("startScreen").style.display = "block";
+        setTimeout(()=> document.getElementById("startScreen").classList.add("show"), 40);
+    }, 300);
+}
+
+/* util */
+function escapeHtml(str){
+    return String(str).replace(/[&<>"'`=\/]/g, s => ({
+        "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;","/":"&#x2F;","`":"&#x60;","=":"&#x3D;"
+    })[s]);
+}
+
+/* Jika ada leaderboard tersimpan, tampilkan saat load resultCard nanti (bisa diakses setelah main) */
+document.addEventListener("DOMContentLoaded", ()=>{
+    // nothing to show on load other than start screen
+    // but pre-render leaderboard data so result screen shows properly if visited
+    renderLeaderboard();
+});
+</script>
+</body>
+</html>
+
